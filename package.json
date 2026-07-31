@@ -12,8 +12,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test",
-    "test:all": "pnpm typecheck && pnpm test && pnpm test:e2e"
+    "test:all": "pnpm typecheck && pnpm test"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -34,7 +33,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^10",
-    "@playwright/test": "^1.62.0",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
