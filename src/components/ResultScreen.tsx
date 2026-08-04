@@ -2,8 +2,13 @@ import { Button } from '@/components/ui/button';
 import type { Language, SubmitStatus } from '@/types/pima-afya';
 
 const SUBMIT_PROMPT = {
-  en: 'Click below to submit your responses and select a hospital for follow-up.',
-  sw: 'Bonyeza hapa chini kuwasilisha majibu yako na kuchagua hospitali kwa ufuatiliaji.',
+  en: 'Your screening is complete. Continue to save your results and select a hospital for follow-up.',
+  sw: 'Uchunguzi wako umekamilika. Endelea ili kuhifadhi matokeo yako na uchague hospitali kwa ufuatiliaji.',
+};
+
+const CONTINUE_BUTTON = {
+  en: 'Continue to save',
+  sw: 'Endelea kuhifadhi',
 };
 
 export function ResultScreen({
@@ -21,12 +26,14 @@ export function ResultScreen({
         <p className="text-sm font-medium">{SUBMIT_PROMPT[language]}</p>
       </div>
 
-      <Button onClick={onSubmit} disabled={status === 'signing-in' || status === 'saving'}>
-        {status === 'saved'
-          ? (language === 'sw' ? 'Imehifadhiwa' : 'Saved')
-          : (language === 'sw' ? 'Hifadhi majibu yangu' : 'Save my responses')}
+      <Button onClick={onSubmit} disabled={status === 'saving'}>
+        {CONTINUE_BUTTON[language]}
       </Button>
-      {status === 'error' && <p className="text-sm text-destructive">{language === 'sw' ? 'Hitilafu imetokea — tafadhali jaribu tena.' : 'Something went wrong — please try again.'}</p>}
+      {status === 'error' && (
+        <p className="text-sm text-destructive">
+          {language === 'sw' ? 'Hitilafu imetokea — tafadhali jaribu tena.' : 'Something went wrong — please try again.'}
+        </p>
+      )}
     </div>
   );
 }

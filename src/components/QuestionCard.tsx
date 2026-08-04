@@ -10,22 +10,22 @@ export function QuestionCard({
   onChange,
 }: {
   question: Question;
-  value: boolean | undefined;
+  value: string | undefined;
   language: Language;
-  onChange: (value: boolean) => void;
+  onChange: (value: string) => void;
 }) {
   return (
     <Card className="p-4">
       <p className="mb-3 text-lg font-medium">{question.text[language]}</p>
       <div className="flex flex-col gap-2">
         <label className="flex items-center gap-2">
-          <Checkbox checked={value === true} onCheckedChange={() => onChange(true)}
+          <Checkbox checked={value === question.yesLabel.en} onCheckedChange={() => onChange(question.yesLabel.en)}
           data-testid={`${question.id}-yes`}
           />
           {question.yesLabel[language]}
         </label>
         <label className="flex items-center gap-2">
-          <Checkbox checked={value === false} onCheckedChange={() => onChange(false)} 
+          <Checkbox checked={value === question.noLabel.en} onCheckedChange={() => onChange(question.noLabel.en)} 
             data-testid={`${question.id}-no`}
             />
           {question.noLabel[language]}

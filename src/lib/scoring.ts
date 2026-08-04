@@ -5,7 +5,7 @@ export function computeScore(answers: Answers): number {
   return QUESTIONS.reduce((total, q) => {
     const value = answers[q.id];
     if (value === undefined) return total;
-    return total + (value ? q.points.yes : q.points.no);
+    return total + (value === q.yesLabel.en ? q.points.yes : q.points.no);
   }, 0);
 }
 

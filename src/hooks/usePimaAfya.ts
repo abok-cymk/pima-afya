@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
+import { normalizeKenyanPhone } from "@/lib/phone"
 import { QUESTIONS } from "@/lib/questions"
 import {
   computeScore,
@@ -27,14 +28,18 @@ import type {
   SubmissionSnapshot,
 } from "@/types/pima-afya"
 
-export type ViewState = "form" | "success" | "thank-you";
+export type ViewState = "form" | "success" | "thank-you"
 
 export function usePimaAfya() {
   const [answers, setAnswers] = useState<Answers>(() => loadAnswers())
   const [language, setLanguageState] = useState<Language>(() => loadLanguage())
   const [status, setStatus] = useState<SubmitStatus>("idle")
   const [error, setError] = useState<string | null>(null)
-  const [hospitalId, setHospitalId] = useState<HospitalId | "">(() => loadHospital() || "")
+  const [phone, setPhone] = useState(() => loadSubmission()?.phone || "")
+  const [phoneError, setPhoneError] = useState<string | null>(null)
+  const [hospitalId, setHospitalId] = useState<HospitalId | "">(
+    () => loadSubmission()?.hospitalId || loadHospital() || ""
+  )
   const [submission, setSubmission] = useState<SubmissionSnapshot | null>(() =>
     loadSubmission()
   )
@@ -44,8 +49,7 @@ export function usePimaAfya() {
 
   const saveToSupabase = useCallback(
     async (
-      uid: string, 
-      email: string, 
+      normalizedPhone: string,
       selectedHospital: HospitalId,
       finalSubmit: boolean = false
     ) => {
@@ -54,24 +58,23 @@ export function usePimaAfya() {
       const scoreBand = getRiskBand(finalScore)
       const now = new Date().toISOString()
 
-      const { error: dbError } = await supabase
-        .from('submissions')
-        .upsert({
-          email: email,
-          uid: uid,
+      const { error: dbError } = await supabase.from("submissions").upsert(
+        {
+          phone: normalizedPhone,
           score_band: scoreBand,
           hospital_id: selectedHospital,
           answers: finalAnswers,
           language: loadLanguage(),
           submitted_at: now,
           updated_at: now,
-          // We can add a flag here if we want to track 'final' vs 'draft'
-        }, { onConflict: 'email' })
+        },
+        { onConflict: "phone" }
+      )
 
       if (dbError) throw dbError
 
       const snapshot: SubmissionSnapshot = {
-        uid,
+        phone: normalizedPhone,
         hospitalId: selectedHospital,
         scoreBand,
         score: finalScore,
@@ -81,7 +84,7 @@ export function usePimaAfya() {
 
       localStorage.setItem(SUBMISSION_KEY, JSON.stringify(snapshot))
       setSubmission(snapshot)
-      
+
       if (finalSubmit) {
         setView("thank-you")
       } else {
@@ -104,68 +107,57 @@ export function usePimaAfya() {
     if (hospitalId) localStorage.setItem(HOSPITAL_KEY, hospitalId)
   }, [hospitalId])
 
-  const setAnswer = useCallback((id: QuestionId, value: boolean) => {
+  const setAnswer = useCallback((id: QuestionId, value: string) => {
     setAnswers((prev) => ({ ...prev, [id]: value }))
   }, [])
 
-  const submit = useCallback(async (isFinal: boolean = false) => {
-    if (!checkComplete(answers) || (isFinal && !hospitalId)) return
-    setError(null)
-    setStatus("saving")
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      let user = session?.user
-
-      if (!user) {
-        setStatus("signing-in")
-        const { error: authError } = await supabase.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: window.location.origin,
-          }
-        })
-        if (authError) throw authError
+  const submit = useCallback(
+    async (isFinal: boolean = false) => {
+      if (!checkComplete(answers)) return
+      
+      if (!isFinal) {
+        setView("success")
         return
       }
 
-      if (!user.email) throw new Error("Email is required for submission.")
-      
-      // If it's the final submit from SuccessScreen, we use the hospitalId
-      // If it's the first submit from ResultScreen, we might not have hospitalId yet
-      // but the UI logic ensures we have it for final.
-      await saveToSupabase(user.id, user.email, hospitalId as HospitalId, isFinal)
+      if (!hospitalId) return
 
-    } catch (e: any) {
-      console.error("Submission error:", e)
-      setStatus("error")
-      setError(e instanceof Error ? e.message : "Something went wrong")
-    }
-  }, [answers, hospitalId, saveToSupabase])
+      setError(null)
+      const normalizedPhone = normalizeKenyanPhone(phone)
 
-  useEffect(() => {
-    const handleAuthChange = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user?.email) {
-        const savedHospital = loadHospital()
-        if (status === "idle" && !submission) {
-          try {
-            setStatus("saving")
-            // Default to non-final save on initial auth redirect
-            await saveToSupabase(session.user.id, session.user.email, (savedHospital || "") as HospitalId, false)
-          } catch (e) {
-            console.error("Post-auth save error:", e)
-            setStatus("error")
-          }
-        }
+      if (!normalizedPhone.ok) {
+        setPhoneError(
+          normalizedPhone.reason === "country"
+            ? "This app is not available in your country yet."
+            : "Enter a valid Kenyan phone number."
+        )
+        setStatus("idle")
+        return
       }
-    }
-    handleAuthChange()
-  }, [saveToSupabase, submission, status])
+
+      setPhoneError(null)
+      setStatus("saving")
+
+      try {
+        await saveToSupabase(
+          normalizedPhone.e164,
+          hospitalId as HospitalId,
+          true
+        )
+      } catch (e: any) {
+        console.error("Submission error:", e)
+        setStatus("error")
+        setError(e instanceof Error ? e.message : "Something went wrong")
+      }
+    },
+    [answers, hospitalId, phone, saveToSupabase]
+  )
 
   const clearAnswers = useCallback(() => {
     setAnswers({})
     setHospitalId("")
+    setPhone("")
+    setPhoneError(null)
     setStatus("idle")
     setView("form")
     localStorage.removeItem(SUBMISSION_KEY)
@@ -194,6 +186,10 @@ export function usePimaAfya() {
     riskBand: score !== null ? getRiskBand(score) : null,
     status,
     error,
+    phone,
+    setPhone,
+    phoneError,
+    setPhoneError,
     submit,
     hospitalId,
     setHospitalId,

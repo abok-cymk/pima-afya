@@ -7,6 +7,7 @@ import { LanguageToggle } from './LanguageToggle';
 import { SubmissionCounter } from './SubmissionCounter';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { normalizeKenyanPhone } from '@/lib/phone';
 import { CheckCircle2 } from 'lucide-react';
 
 /** Bilingual intro copy */
@@ -16,8 +17,8 @@ const INTRO = {
     sw: 'Zana ya Kujipima Hatari ya Kisukari',
   },
   description: {
-    en: 'Answer seven quick questions to understand your diabetes risk — no account needed. The whole thing takes under 60 seconds. A Google sign-in is only asked for at the very end, so you can screen yourself freely and privately before committing to anything.',
-    sw: 'Jibu maswali saba mafupi ili kujua hatari yako ya kisukari — hakuna akaunti inayohitajika. Inachukua chini ya sekunde 60. Kuingia kwa Google kunaulizwa mwishoni tu, ili uweze kujipima kwa uhuru na faragha bila sharti lolote.',
+    en: 'Answer seven quick questions to understand your diabetes risk. Add a Kenyan phone number when you are ready to save your screening and select a hospital for follow-up.',
+    sw: 'Jibu maswali saba mafupi ili kujua hatari yako ya kisukari. Weka nambari ya simu ya Kenya ukiwa tayari kuhifadhi majibu yako na kuchagua hospitali kwa ufuatiliaji.',
   },
   clear: {
     en: 'Clear all answers',
@@ -45,7 +46,9 @@ export function PimaAfyaForm() {
     questions, answers, setAnswer, language, setLanguage,
     answeredCount, totalQuestions, isComplete,
     hospitalId, setHospitalId, status, submit,
+    phone, setPhone, phoneError, setPhoneError,
     submission, view, clearAnswers, resetToHome,
+    score, riskBand
   } = usePimaAfya();
 
   // Sentinel element at the very top of the form — used to detect
@@ -65,7 +68,7 @@ export function PimaAfyaForm() {
   }, []);
 
   const hasAnswers = answeredCount > 0;
-  const isSuccessView = view === 'success' && submission;
+  const isSuccessView = view === 'success';
   const isThankYouView = view === 'thank-you';
 
   // Only show the clear button while the form (not success/thank-you screen) is visible
@@ -127,8 +130,26 @@ export function PimaAfyaForm() {
         </div>
       ) : isSuccessView ? (
         <SuccessScreen 
-          snapshot={submission} 
+          snapshot={submission}
+          score={score || 0}
+          riskBand={riskBand || 'low'}
           language={language}
+          phone={phone}
+          phoneError={phoneError}
+          onPhoneChange={(value) => {
+            setPhone(value)
+            if (phoneError) setPhoneError(null)
+          }}
+          onPhoneBlur={() => {
+            const normalized = normalizeKenyanPhone(phone)
+            setPhoneError(
+              normalized.ok
+                ? null
+                : normalized.reason === 'country'
+                  ? 'This app is not available in your country yet.'
+                  : 'Enter a valid Kenyan phone number.'
+            )
+          }}
           selectedHospitalId={hospitalId}
           onHospitalChange={setHospitalId}
           onSubmit={submit}
