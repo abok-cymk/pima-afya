@@ -9,14 +9,14 @@ export type QuestionId =
   | 'hypertension'
   | 'physicalActivity';
 
-export type Answers = Partial<Record<QuestionId, boolean>>;
+export type Answers = Partial<Record<QuestionId, string>>;
 export type Language = 'en' | 'sw';
 export type RiskBand = 'high' | 'low';
-export type SubmitStatus = 'idle' | 'signing-in' | 'saving' | 'saved' | 'error';
+export type SubmitStatus = 'idle' | 'saving' | 'saved' | 'error';
 export type { HospitalId };
 
 export interface SubmissionSnapshot {
-  uid: string;
+  phone: string;
   hospitalId: HospitalId;
   scoreBand: RiskBand;
   score: number;

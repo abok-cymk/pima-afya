@@ -32,14 +32,14 @@ test('renders both yes and no option labels', () => {
 
 // ── checked state ─────────────────────────────────────────────────────────────
 
-test('yes checkbox is checked when value is true', () => {
-  render(<QuestionCard question={question} value={true} language="en" onChange={vi.fn()} />);
+test('yes checkbox is checked when value is the yes label', () => {
+  render(<QuestionCard question={question} value="40 years and above" language="en" onChange={vi.fn()} />);
   expect(screen.getByTestId('age-yes')).toHaveAttribute('data-checked');
   expect(screen.getByTestId('age-no')).not.toHaveAttribute('data-checked');
 });
 
-test('no checkbox is checked when value is false', () => {
-  render(<QuestionCard question={question} value={false} language="en" onChange={vi.fn()} />);
+test('no checkbox is checked when value is the no label', () => {
+  render(<QuestionCard question={question} value="Below 40" language="en" onChange={vi.fn()} />);
   expect(screen.getByTestId('age-no')).toHaveAttribute('data-checked');
   expect(screen.getByTestId('age-yes')).not.toHaveAttribute('data-checked');
 });
@@ -52,16 +52,16 @@ test('neither checkbox is checked when value is undefined', () => {
 
 // ── callbacks ─────────────────────────────────────────────────────────────────
 
-test('calls onChange(true) when the yes checkbox is clicked', async () => {
+test('calls onChange with yes label when the yes checkbox is clicked', async () => {
   const onChange = vi.fn();
   render(<QuestionCard question={question} value={undefined} language="en" onChange={onChange} />);
   await userEvent.click(screen.getByTestId('age-yes'));
-  expect(onChange).toHaveBeenCalledWith(true);
+  expect(onChange).toHaveBeenCalledWith('40 years and above');
 });
 
-test('calls onChange(false) when the no checkbox is clicked', async () => {
+test('calls onChange with no label when the no checkbox is clicked', async () => {
   const onChange = vi.fn();
   render(<QuestionCard question={question} value={undefined} language="en" onChange={onChange} />);
   await userEvent.click(screen.getByTestId('age-no'));
-  expect(onChange).toHaveBeenCalledWith(false);
+  expect(onChange).toHaveBeenCalledWith('Below 40');
 });
